@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/carbon-components/css/carbon-components.min.css">
+    <script src="https://unpkg.com/carbon-components/scripts/carbon-components.min.js"></script>
+    <title>JS - Async/Await</title>
+</head>
+<body style="margin: 20px;">
+
+    <h2>Async/Await</h2>
+    <br>
+    <div data-notification class="bx--inline-notification bx--inline-notification--info" aria-live="polite">
+        <div class="bx--inline-notification__details">
+            <svg class="bx--inline-notification__icon" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 16A8 8 0 1 1 8 0a8 8 0 0 1 0 16zm1-3V7H7v6h2zM8 5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z" fill-rule="evenodd" />
+            </svg>
+            <div class="bx--inline-notification__text-wrapper">
+                <p class="bx--inline-notification__title" id="title">Tips</p>
+                <br>
+                <p class="bx--inline-notification__subtitle" id="subtitle">Click the buttons.</p>
+            </div>
+        </div>
+    </div>
+    <br>      
+
+    <div style="display: flex;">
+        
+        <div style="flex: 1;">
+            <button class="bx--btn bx--btn--primary" type="button" onclick="callForEach('list1')">array.forEach()</button>
+            <ol style="flex: 1;" id="list1"></ol>
+        </div>
+        
+        <div style="flex: 1;">
+            <button class="bx--btn bx--btn--primary" type="button" onclick="callForOf('list2')">for(let el of array)</button>
+            <ol style="flex: 1;" id="list2"></ol>
+        </div>
+        
+        <div style="flex: 1;">
+            <button class="bx--btn bx--btn--primary" type="button" onclick="callTryCatchFinally('list3')">try{} catch{} finally{}</button>
+            <div class="bx--form-item">
+                <div class="bx--select bx--select--inline">
+                    <label for="selectedMethod" class="bx--label">Method</label>
+                  <select id="selectedMethod" class="bx--select-input">
+                    <optgroup class="bx--select-optgroup" label="no Error">
+                      <option class="bx--select-option" value="0" selected>0 - forEach</option>
+                      <option class="bx--select-option" value="1">1 - forOf</option>
+                      <option class="bx--select-option" value="2">2 - await Promise.all</option>
+                    </optgroup>
+                    <optgroup class="bx--select-optgroup" label="throw new Error">
+                      <option class="bx--select-option" value="3">3 - forEach</option>
+                      <option class="bx--select-option" value="4">4 - forOf</option>
+                      <option class="bx--select-option" value="5">5 - await Promise.all</option>
+                      <option class="bx--select-option" value="6">6 - Promise.all</option>
+                    </optgroup>
+                  </select>
+                </div>
+              </div>
+            <ol id="list3"></ol>
+        </div>
+        
+    </div>
+
+    <script>
+
+        const arr = [...Array(10).keys()]
+
+        const tips = {
+            "forEach": "Just creates the promises, don't wait it resolve to create the next one. Promises are not resolved in a specific order.", 
+            "forOf": "Create a promise and wait it resolve to start the next one. Promises resolved in a specific order.", 
+            "tryCatchFinally": [
+                "forEach inside a try block creates the promises and don't wait them to finish, goes directly to finally block after promises creation. It won't catch errors thrown by promises.",
+                "forOf inside a try block creates the promises one after another, waiting it resolve to create a new promise. The finally block gets executed only after all the promises are resolved.",
+                "Promise.all inside a try block will wait for the promises resolve and then execute the finally block. The promises are resolved unordered (can be an alternative to forOf).",
+                "forEach inside a try block won't get the error thrown by a promise. It created the promises without waiting for any of them resolve, and goes directly to finally block.",
+                "forOf inside a try block will create the promises in sequence, waiting the previous one to resolve to start the next. If a promise throw an error it will execute the catch block of try-catch-finally. And then execute the finally block.",
+                "Promise.all inside a try block will wait for the promises resolve and then execute the finally block. But if an error is thrown by a promise, it will execute the finally block, and the next promises will be executed after it.",
+                "When Promise.all is used without the await, it will create the promises execute the finally block. It will not catch any error from the promises."
+            ]
+        }
+
+        function prepareList(list, value, title = "", pos = ""){
+            if (value === "START"){
+                document.getElementById("title").innerHTML = title
+                document.getElementById("subtitle").innerHTML = title !== "tryCatchFinally" ? tips[title] : tips[title][pos]
+                document.getElementById(list).innerHTML = "<li><span class='bx--tag'>" + value + "</span></li>"
+            }
+            else
+                document.getElementById(list).innerHTML += "<li><span class='bx--tag'>" + value + "</span></li>"
+        }
+
+        function delay() {
+            return new Promise(resolve => {
+                setTimeout(resolve, Math.random() * 1000);
+            });
+        }
+
+        async function apiCall(list, el, useError = false){
+            await delay(); 
+            if (useError && el === 2){
+                throw new Error("catch block reached!")
+            }
+            document.getElementById(list).innerHTML += "<li><span class='bx--tag'>" + el + "</span></li>"
+        }
+
+
+        function callForEach(list){
+            prepareList(list, "START", "forEach")
+
+            arr.forEach(async el => {
+                await apiCall(list, el)
+            })
+
+            prepareList(list, "END")
+        }
+
+
+        async function callForOf(list){
+            prepareList(list, "START", "forOf")
+
+            for(let el of arr){
+                await apiCall(list, el)
+            }
+
+            prepareList(list, "END")
+        }
+
+
+        async function callTryCatchFinally(list){
+            try {
+
+                let option = document.getElementById("selectedMethod").value;
+                prepareList(list, "START", "tryCatchFinally", option)
+
+                // ANALISE SEM ERROS
+
+                if (option === "0"){
+                    arr.forEach(async el => {
+                        await apiCall(list, el)
+                    })
+                }
+
+                else if (option === "1"){
+                    for(let el of arr){
+                        await apiCall(list, el)
+                    }
+                }
+                
+                else if (option === "2"){
+                    const promises = arr.map(async el => {
+                        await apiCall(list, el)
+                    })
+                    await Promise.all(promises)
+                }
+
+                // ANALISE COM ERROS: erro quando el === 2
+               
+                else if (option === "3"){
+                    arr.forEach(async el => {
+                        await apiCall(list, el, true)
+                    })
+                }
+
+                else if (option === "4"){
+                    for(let el of arr){
+                        await apiCall(list, el, true)
+                    }
+                }
+
+                else if (option === "5"){
+                    const promises = arr.map(async el => {
+                        await apiCall(list, el, true)
+                    })
+                    await Promise.all(promises)
+                }
+                
+                else if (option === "6"){
+                    const promises = arr.map(async el => {
+                        await apiCall(list, el, true)
+                    })
+                    Promise.all(promises)
+                }
+                
+                
+            } 
+            catch (error) {
+                alert(error)
+            }
+            finally{
+                prepareList(list, "END")
+            }
+        }
+
+
+    </script>
+</body>
+</html>
